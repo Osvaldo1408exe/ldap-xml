@@ -1,0 +1,3 @@
+<delete class-name="Usuario">
+  <association>Teste1</association>
+</delete>
