@@ -84,19 +84,22 @@ public class XmlService {
 
             NodeList values = attrElement.getElementsByTagName("value");
             for (int j = 0; j < values.getLength(); j++) {
-                String value = values.item(j).getTextContent();
+                String value = values.item(j).getTextContent().trim();
 
                 switch (attrName.toLowerCase()) {
                     case "login":
+                        value = value.replaceAll("\\d", "");
                         uid = value.toLowerCase();
                         attrs.put("uid", uid);
                         attrs.put("cn", value);
                         attrs.put("sn", value);
                         break;
                     case "nome completo":
+                        value = value.replaceAll("\\d", "");
                         attrs.put("displayName", value);
                         break;
                     case "telefone":
+                        value = value.replaceAll("[^\\d]", "");
                         attrs.put("telephoneNumber", value);
                         break;
                     case "grupo":
