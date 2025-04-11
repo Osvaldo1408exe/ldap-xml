@@ -1,0 +1,137 @@
+{
+	"info": {
+		"_postman_id": "d14eec55-2099-4c3a-95cd-2fcc848e08a5",
+		"name": "Envio Xml para LDAP via Spring Boot",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "33909906"
+	},
+	"item": [
+		{
+			"name": "delete user",
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "jhSpSVE4z/DeleteUsuario.xml"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/xml/ImportEntity",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"xml",
+						"ImportEntity"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Modify user",
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "hTCKwL8YU/ModifyUsuario.xml"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/xml/ImportEntity",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"xml",
+						"ImportEntity"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "add user or group",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "file",
+							"type": "file",
+							"src": "AX3-aaXHo/AddUsuario1.xml"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/xml/ImportEntity",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"xml",
+						"ImportEntity"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "get All users",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "formdata",
+					"formdata": []
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/xml/ImportEntity",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"xml",
+						"ImportEntity"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
