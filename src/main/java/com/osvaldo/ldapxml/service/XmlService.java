@@ -224,16 +224,15 @@ public class XmlService {
     }
 
     private void modificarUsuario(Element root) throws NamingException {
-        String login = root.getElementsByTagName("association").item(0).getTextContent().toLowerCase();
+        String login = root.getElementsByTagName("association").item(0).getTextContent().toLowerCase().replaceAll("\\d", "");
         String dn = "uid=" + login + ",ou=user,dc=local,dc=com";
 
         DirContext ctx = LdapConnection.getContext();
 
-
         NodeList modifyAttrs = root.getElementsByTagName("modify-attr");
         for (int i = 0; i < modifyAttrs.getLength(); i++) {
             Element attr = (Element) modifyAttrs.item(i);
-            String attrName = attr.getAttribute("attr-name");
+            String attrName = attr.getAttribute("attr-name").toLowerCase();
 
 
             NodeList removeNodes = attr.getElementsByTagName("remove-value");
@@ -242,11 +241,39 @@ public class XmlService {
                 NodeList values = removeElement.getElementsByTagName("value");
 
                 for (int k = 0; k < values.getLength(); k++) {
-                    String value = values.item(k).getTextContent();
+                    String value = values.item(k).getTextContent().trim();
+
+                    switch (attrName) {
+                        case "login":
+                        case "nome completo":
+                            value = value.replaceAll("\\d", "");
+                            break;
+                        case "telefone":
+                            value = value.replaceAll("[^\\d]", "");
+                            break;
+                        case "grupo":
+                            value = value.trim();
+                            String grupoDn = "cn=" + value + ",ou=groups,dc=local,dc=com";
+                            Attribute memberAttr = new BasicAttribute("member", dn);
+                            ModificationItem[] modsGrupoRemove = new ModificationItem[]{
+                                    new ModificationItem(DirContext.REMOVE_ATTRIBUTE, memberAttr)
+                            };
+                            try {
+                                ctx.modifyAttributes(grupoDn, modsGrupoRemove);
+                            } catch (NamingException e) {
+                                if (!e.getMessage().contains("attribute is not present")) throw e;
+                            }
+                            continue;
+                    }
+
                     ModificationItem[] mods = new ModificationItem[1];
                     Attribute modAttr = new BasicAttribute(attrName, value);
                     mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, modAttr);
-                    ctx.modifyAttributes(dn, mods);
+                    try {
+                        ctx.modifyAttributes(dn, mods);
+                    } catch (NamingException e) {
+                        if (!e.getMessage().contains("attribute is not present")) throw e;
+                    }
                 }
             }
 
@@ -257,7 +284,31 @@ public class XmlService {
                 NodeList values = addElement.getElementsByTagName("value");
 
                 for (int k = 0; k < values.getLength(); k++) {
-                    String value = values.item(k).getTextContent();
+                    String value = values.item(k).getTextContent().trim();
+
+                    switch (attrName) {
+                        case "login":
+                        case "nome completo":
+                            value = value.replaceAll("\\d", "");
+                            break;
+                        case "telefone":
+                            value = value.replaceAll("[^\\d]", "");
+                            break;
+                        case "grupo":
+                            value = value.trim();
+                            String grupoDn = "cn=" + value + ",ou=groups,dc=local,dc=com";
+                            Attribute memberAttr = new BasicAttribute("member", dn);
+                            ModificationItem[] modsGrupoAdd = new ModificationItem[]{
+                                    new ModificationItem(DirContext.ADD_ATTRIBUTE, memberAttr)
+                            };
+                            try {
+                                ctx.modifyAttributes(grupoDn, modsGrupoAdd);
+                            } catch (NameNotFoundException e) {
+                                System.err.println("Grupo " + value + " não encontrado: " + grupoDn);
+                            }
+                            continue;
+                    }
+
                     ModificationItem[] mods = new ModificationItem[1];
                     Attribute modAttr = new BasicAttribute(attrName, value);
                     mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, modAttr);
