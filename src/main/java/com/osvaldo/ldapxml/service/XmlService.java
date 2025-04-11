@@ -276,6 +276,33 @@ public class XmlService {
         String dn = "uid=" + login + ",ou=user,dc=local,dc=com";
 
         DirContext ctx = LdapConnection.getContext();
+
+
+        String baseGruposDn = "ou=groups,dc=local,dc=com";
+        String filtro = "(member=" + dn + ")";
+
+        SearchControls controls = new SearchControls();
+        controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+        NamingEnumeration<SearchResult> results = ctx.search(baseGruposDn, filtro, controls);
+
+        while (results.hasMore()) {
+            SearchResult result = results.next();
+            String grupoDn = result.getNameInNamespace();
+
+
+            ModificationItem[] mods = new ModificationItem[]{
+                    new ModificationItem(DirContext.REMOVE_ATTRIBUTE, new BasicAttribute("member", dn))
+            };
+
+            try {
+                ctx.modifyAttributes(grupoDn, mods);
+            } catch (NamingException e) {
+                System.err.println("Erro ao remover usuário do grupo " + grupoDn + ": " + e.getMessage());
+            }
+        }
+
+
         ctx.unbind(dn);
         ctx.close();
     }
