@@ -323,7 +323,7 @@ public class XmlService {
 
 
     private void deletarUsuario(Element root) throws NamingException {
-        String login = root.getElementsByTagName("association").item(0).getTextContent().toLowerCase();
+        String login = root.getElementsByTagName("association").item(0).getTextContent().toLowerCase().replaceAll("\\d", "");
         String dn = "uid=" + login + ",ou=user,dc=local,dc=com";
 
         DirContext ctx = LdapConnection.getContext();
