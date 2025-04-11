@@ -7,16 +7,75 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
 import javax.naming.NameNotFoundException;
+import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class XmlService {
+
+    public List<Map<String, Object>> listarUsuarios() throws NamingException {
+        List<Map<String, Object>> usuarios = new ArrayList<>();
+
+        String baseDn = "ou=user,dc=local,dc=com";
+        String filtro = "(objectClass=inetOrgPerson)";
+        SearchControls controls = new SearchControls();
+        controls.setSearchScope(SearchControls.ONELEVEL_SCOPE);
+
+        NamingEnumeration<SearchResult> results = LdapConnection.getContext().search(baseDn, filtro, controls);
+
+        while (results.hasMore()) {
+            SearchResult sr = results.next();
+            Attributes attrs = sr.getAttributes();
+            Map<String, Object> usuario = new HashMap<>();
+
+            String uid = attrs.get("uid") != null ? (String) attrs.get("uid").get() : null;
+            if (uid == null) continue;
+
+            usuario.put("uid", uid);
+            usuario.put("cn", attrs.get("cn") != null ? attrs.get("cn").get() : "");
+            usuario.put("nomeCompleto", attrs.get("displayName") != null ? attrs.get("displayName").get() : "");
+            usuario.put("telefone", attrs.get("telephoneNumber") != null ? attrs.get("telephoneNumber").get() : "");
+
+            List<String> grupos = buscarGruposDoUsuario(uid);
+            usuario.put("grupos", grupos);
+
+            usuarios.add(usuario);
+        }
+
+        return usuarios;
+    }
+
+    private List<String> buscarGruposDoUsuario(String uid) throws NamingException {
+        List<String> grupos = new ArrayList<>();
+        String userDn = "uid=" + uid + ",ou=user,dc=local,dc=com";
+        String baseGruposDn = "ou=groups,dc=local,dc=com";
+        String filtro = "(member=" + userDn + ")";
+
+        SearchControls controls = new SearchControls();
+        controls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+
+        NamingEnumeration<SearchResult> results = LdapConnection.getContext().search(baseGruposDn, filtro, controls);
+
+        while (results.hasMore()) {
+            SearchResult sr = results.next();
+            Attributes attrs = sr.getAttributes();
+            if (attrs.get("cn") != null) {
+                grupos.add((String) attrs.get("cn").get());
+            }
+        }
+
+        return grupos;
+    }
+
+
 
     public void addXml(InputStream xmlInputStream) throws Exception {
         DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();

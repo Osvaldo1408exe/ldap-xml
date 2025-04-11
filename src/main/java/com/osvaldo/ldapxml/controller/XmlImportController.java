@@ -6,7 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.naming.NamingException;
 import java.io.InputStream;
+import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -17,6 +20,19 @@ public class XmlImportController {
 
     public XmlImportController(XmlService XmlService) {
         this.XmlService = XmlService;
+    }
+
+
+    //list all users and groups
+    @GetMapping("/ImportEntity")
+    public ResponseEntity<List<Map<String, Object>>> listarUsuarios() {
+        try {
+            List<Map<String, Object>> usuarios = XmlService.listarUsuarios();
+            return ResponseEntity.ok(usuarios);
+        } catch (NamingException e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
     }
 
     //ADD USER OR GROUP
