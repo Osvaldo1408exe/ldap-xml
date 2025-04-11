@@ -18,12 +18,12 @@ public class XmlUsuarioReader {
         List<Usuario> usuarios = new ArrayList<>();
 
         try {
-            // Parser de XML
+
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.parse(xmlInputStream);
 
-            // XPath para encontrar os nós <add class-name="Usuario">
+
             XPathFactory xpathFactory = XPathFactory.newInstance();
             XPath xpath = xpathFactory.newXPath();
             NodeList addNodes = (NodeList) xpath.evaluate("//add[@class-name='Usuario']",
@@ -31,7 +31,7 @@ public class XmlUsuarioReader {
 
             System.out.println("Quantidade de usuários encontrados: " + addNodes.getLength());
 
-            // Regex de validação
+
             String regexNome = "^[\\p{L}0-9 ]+$";
             String regexLogin = "^[a-zA-Z0-9]+$";
             String regexTelefone = "^[0-9]+$";
@@ -88,7 +88,6 @@ public class XmlUsuarioReader {
 
                 usuario.setGrupos(grupos);
 
-                // Adiciona apenas se todos os campos obrigatórios forem válidos
                 if (usuario.getNomeCompleto() != null &&
                         usuario.getLogin() != null &&
                         usuario.getTelefone() != null) {

@@ -1,13 +1,21 @@
 package com.osvaldo.ldapxml.config;
 
+import org.springframework.stereotype.Service;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
 import javax.naming.Context;
 import javax.naming.NamingEnumeration;
 import javax.naming.NamingException;
 import javax.naming.directory.*;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
-
+@Service
 public class LdapConnection {
 
     private static DirContext getContext() throws NamingException {
@@ -15,38 +23,150 @@ public class LdapConnection {
         env.put(Context.INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
         env.put(Context.PROVIDER_URL, "ldap://localhost:389");
         env.put(Context.SECURITY_AUTHENTICATION, "simple");
-        env.put(Context.SECURITY_PRINCIPAL, "cn=admin"); // ou outro admin
+        env.put(Context.SECURITY_PRINCIPAL, "cn=admin");
         env.put(Context.SECURITY_CREDENTIALS, "123");
 
         return new InitialDirContext(env);
     }
 
-    public static List<String> listarUsuarios() {
-        List<String> usuarios = new ArrayList<>();
-        String baseDn = "dc=usuarios,dc=com";
-        String filtro = "(objectClass=inetOrgPerson)";
 
-        try {
-            DirContext ctx = getContext();
+    public void processXml(InputStream xmlInputStream) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document document = builder.parse(xmlInputStream);
 
-            SearchControls searchControls = new SearchControls();
-            searchControls.setSearchScope(SearchControls.SUBTREE_SCOPE);
+        Element root = document.getDocumentElement();
+        String className = root.getAttribute("class-name");
 
-            NamingEnumeration<SearchResult> results = ctx.search(baseDn, filtro, searchControls);
-
-            while (results.hasMore()) {
-                SearchResult result = results.next();
-                Attributes attrs = result.getAttributes();
-
-                String uid = attrs.get("uid") != null ? attrs.get("uid").get().toString() : "sem uid";
-                usuarios.add(uid);
+        if (root.getNodeName().equals("add")) {
+            if (className.equalsIgnoreCase("Usuario")) {
+                adicionarUsuario(root);
+            } else if (className.equalsIgnoreCase("Grupo")) {
+                adicionarGrupo(root);
             }
+        } else if (root.getNodeName().equals("modify")) {
+            if (className.equalsIgnoreCase("Usuario")) {
+                modificarUsuario(root);
+            }
+        }
+    }
+    private void adicionarUsuario(Element root) throws NamingException {
+        Attributes attrs = new BasicAttributes(true);
+        Attribute objClass = new BasicAttribute("objectClass");
+        objClass.add("inetOrgPerson");
 
-            ctx.close();
-        } catch (NamingException e) {
-            e.printStackTrace();
+        String uid = null;
+
+        NodeList attrList = root.getElementsByTagName("add-attr");
+        for (int i = 0; i < attrList.getLength(); i++) {
+            Element attrElement = (Element) attrList.item(i);
+            String attrName = attrElement.getAttribute("attr-name");
+
+            NodeList values = attrElement.getElementsByTagName("value");
+            for (int j = 0; j < values.getLength(); j++) {
+                String value = values.item(j).getTextContent();
+                if (attrName.equalsIgnoreCase("Login")) {
+                    uid = value.toLowerCase();
+                    attrs.put("uid", uid);
+                    attrs.put("cn", value);
+                    attrs.put("sn", value);
+                } else if (attrName.equalsIgnoreCase("Nome Completo")) {
+                    attrs.put("displayName", value);
+                } else if (attrName.equalsIgnoreCase("Telefone")) {
+                    attrs.put("telephoneNumber", value);
+                } else if (attrName.equalsIgnoreCase("Grupo")) {
+
+                }
+            }
         }
 
-        return usuarios;
+        attrs.put(objClass);
+
+        String dn = "uid=" + uid + ",ou=user,dc=local,dc=com";
+        LdapConnection.getContext().bind(dn, null, attrs);
     }
+
+    private void adicionarGrupo(Element root) throws NamingException {
+        Attributes attrs = new BasicAttributes(true);
+        Attribute objClass = new BasicAttribute("objectClass");
+        objClass.add("groupOfNames");
+
+        String cn = null;
+
+        NodeList attrList = root.getElementsByTagName("add-attr");
+        for (int i = 0; i < attrList.getLength(); i++) {
+            Element attrElement = (Element) attrList.item(i);
+            String attrName = attrElement.getAttribute("attr-name");
+
+            NodeList values = attrElement.getElementsByTagName("value");
+            for (int j = 0; j < values.getLength(); j++) {
+                String value = values.item(j).getTextContent();
+                if (attrName.equalsIgnoreCase("Identificador")) {
+                    cn = value;
+                    attrs.put("cn", cn);
+                } else if (attrName.equalsIgnoreCase("Descricao")) {
+                    attrs.put("description", value);
+                }
+            }
+        }
+
+
+        attrs.put("member", "cn=admin");
+
+        attrs.put(objClass);
+
+        String dn = "cn=" + cn + ",ou=groups,dc=local,dc=com";
+        LdapConnection.getContext().bind(dn, null, attrs);
+    }
+
+    private void modificarUsuario(Element root) throws NamingException {
+        String login = root.getElementsByTagName("association").item(0).getTextContent().toLowerCase();
+        String dn = "uid=" + login + ",ou=user,dc=local,dc=com";
+
+        DirContext ctx = LdapConnection.getContext();
+
+
+        NodeList modifyAttrs = root.getElementsByTagName("modify-attr");
+        for (int i = 0; i < modifyAttrs.getLength(); i++) {
+            Element attr = (Element) modifyAttrs.item(i);
+            String attrName = attr.getAttribute("attr-name");
+
+
+            NodeList removeNodes = attr.getElementsByTagName("remove-value");
+            for (int j = 0; j < removeNodes.getLength(); j++) {
+                Element removeElement = (Element) removeNodes.item(j);
+                NodeList values = removeElement.getElementsByTagName("value");
+
+                for (int k = 0; k < values.getLength(); k++) {
+                    String value = values.item(k).getTextContent();
+                    ModificationItem[] mods = new ModificationItem[1];
+                    Attribute modAttr = new BasicAttribute(attrName, value);
+                    mods[0] = new ModificationItem(DirContext.REMOVE_ATTRIBUTE, modAttr);
+                    ctx.modifyAttributes(dn, mods);
+                }
+            }
+
+
+            NodeList addNodes = attr.getElementsByTagName("add-value");
+            for (int j = 0; j < addNodes.getLength(); j++) {
+                Element addElement = (Element) addNodes.item(j);
+                NodeList values = addElement.getElementsByTagName("value");
+
+                for (int k = 0; k < values.getLength(); k++) {
+                    String value = values.item(k).getTextContent();
+                    ModificationItem[] mods = new ModificationItem[1];
+                    Attribute modAttr = new BasicAttribute(attrName, value);
+                    mods[0] = new ModificationItem(DirContext.ADD_ATTRIBUTE, modAttr);
+                    ctx.modifyAttributes(dn, mods);
+                }
+            }
+        }
+
+        ctx.close();
+    }
+
+
+
+
+
 }
